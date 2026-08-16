@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dashboard premium de estadísticas académicas para UTN. Visualización de aprobación directa, notas y regularidades de alumnos.">
+    <title>UTN Academics Dashboard - Estadísticas de Cátedra</title>
+    <link rel="stylesheet" href="style.css?v=7">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- Global App Header + Tab Navigation                           -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div class="app-header">
+        <div class="app-header-inner">
+            <div class="app-brand">
+                <div class="app-brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
+                    </svg>
+                </div>
+                <div class="app-brand-text">
+                    <span class="app-brand-name">UTN Dashboard Académico</span>
+                    <span class="app-brand-sub">Facultad Regional Córdoba</span>
+                </div>
+            </div>
+
+            <nav class="tab-bar" role="tablist" aria-label="Secciones del dashboard">
+                <button class="tab-btn active" data-tab="tab-profesor" id="btn-tab-profesor" role="tab" aria-selected="true" aria-controls="tab-profesor">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    </svg>
+                    Planilla del Profesor
+                </button>
+                <button class="tab-btn" data-tab="tab-historia" id="btn-tab-historia" role="tab" aria-selected="false" aria-controls="tab-historia">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    Historia Académica
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 1: Planilla del Profesor                                 -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div id="tab-profesor" class="tab-panel" role="tabpanel" aria-labelledby="btn-tab-profesor">
+
+        <!-- Landing / Empty State -->
+        <div id="prof-landing" class="tab-landing">
+            <div class="tab-landing-inner">
+                <div class="landing-icon landing-icon-profesor">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    </svg>
+                </div>
+                <h2 class="landing-title">Planilla del Profesor</h2>
+                <p class="landing-desc">Cargá tu planilla Excel de calificaciones para visualizar el dashboard de rendimiento académico de la comisión.</p>
+                <div class="landing-drop-zone" id="prof-landing-drop">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <p><strong>Arrastrá y soltá aquí</strong> o hacé clic para examinar</p>
+                    <span>Soporta .xlsx y .xls · Podés cargar varias comisiones a la vez</span>
+                    <input type="file" id="prof-file-input" accept=".xlsx,.xls" multiple style="display:none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Professor Dashboard (hidden until file loaded) -->
+        <div id="prof-dashboard" class="dashboard-container" style="display:none">
+
+            <!-- Top bar: metadata + controls -->
+            <div class="prof-topbar">
+                <div class="header-subtitle" id="header-metadata">
+                    <span id="meta-materia">Materia: -</span>
+                    <span id="meta-comision">Comisión: -</span>
+                    <span id="meta-anio">Año: -</span>
+                    <span id="meta-curso">Curso: -</span>
+                    <span id="meta-especialidad">Especialidad: -</span>
+                </div>
+                <div class="prof-topbar-right">
+                    <div class="sheet-selector-box" id="sheet-selector-box" style="display:none">
+                        <label for="sheet-selector" style="font-size:0.8rem;color:var(--text-secondary);font-weight:500;white-space:nowrap">Planilla activa:</label>
+                        <select id="sheet-selector" class="filter-select" style="min-width:220px"></select>
+                    </div>
+                    <div class="compact-upload" id="drop-zone">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                        </svg>
+                        <span>Agregar planilla</span>
+                        <input type="file" id="file-input" accept=".xlsx,.xls" multiple style="display:none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Metrics Grid -->
+            <div class="kpi-grid">
+                <div class="kpi-card" id="kpi-total-students">
+                    <div class="kpi-title">Alumnos Inscriptos</div>
+                    <div class="kpi-value" id="val-total-students">0</div>
+                    <div class="kpi-desc">Matriculados en la comisión</div>
+                </div>
+                <div class="kpi-card kpi-ap-directa" id="kpi-ap-directa">
+                    <div class="kpi-title">Aprobación Directa</div>
+                    <div class="kpi-value" id="val-ap-directa">0</div>
+                    <div class="kpi-desc" id="val-ap-directa-pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-promocion" id="kpi-promocion">
+                    <div class="kpi-title">Promoción TP</div>
+                    <div class="kpi-value" id="val-promocion">0</div>
+                    <div class="kpi-desc" id="val-promocion-pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-regular" id="kpi-regular">
+                    <div class="kpi-title">Regular</div>
+                    <div class="kpi-value" id="val-regular">0</div>
+                    <div class="kpi-desc" id="val-regular-pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-libre" id="kpi-libre">
+                    <div class="kpi-title">Libres</div>
+                    <div class="kpi-value" id="val-libre">0</div>
+                    <div class="kpi-desc" id="val-libre-pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-abandono" id="kpi-abandono">
+                    <div class="kpi-title">Abandono</div>
+                    <div class="kpi-value" id="val-abandono">0</div>
+                    <div class="kpi-desc" id="val-abandono-pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-no-curso" id="kpi-no-curso">
+                    <div class="kpi-title">No Cursó</div>
+                    <div class="kpi-value" id="val-no-curso">0</div>
+                    <div class="kpi-desc" id="val-no-curso-pct">0% del total</div>
+                </div>
+            </div>
+
+            <!-- Top Chart (Full Width) -->
+            <div class="chart-full-width">
+                <div class="chart-card">
+                    <div class="chart-title">Registro del Profesor (Aprobación)</div>
+                    <div class="chart-content-split">
+                        <div class="chart-table-container">
+                            <table class="kpi-mini-table">
+                                <thead>
+                                    <tr>
+                                        <th>Estado</th>
+                                        <th style="text-align:right">Cantidad</th>
+                                        <th style="text-align:right">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reg-profesor-table-body"></tbody>
+                            </table>
+                        </div>
+                        <div class="chart-container-split">
+                            <canvas id="reg-profesor-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Distribución de Notas (1er Parcial)</div>
+                    <div class="chart-container">
+                        <canvas id="grades-chart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Distribución de Notas (2do Parcial)</div>
+                    <div class="chart-container">
+                        <canvas id="grades-2nd-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Data Table -->
+            <div class="data-panel">
+                <div class="panel-header">
+                    <div class="panel-title">Lista General de Alumnos</div>
+                    <div class="panel-controls">
+                        <div class="search-box">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z" />
+                            </svg>
+                            <input type="text" id="search-input" placeholder="Buscar por nombre o legajo...">
+                        </div>
+                        <select id="filter-reg-profesor" class="filter-select">
+                            <option value="all">Todos (Reg. Profesor)</option>
+                            <option value="Abandonó">Abandonó</option>
+                            <option value="Ap. Directa">Ap. Directa</option>
+                            <option value="Libre">Libre</option>
+                            <option value="No Cursó">No Cursó</option>
+                            <option value="Promocion TP">Promocion TP</option>
+                            <option value="Regular">Regular</option>
+                            <option value="vacío">Sin registrar / Vacío</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="students-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort="legajo">Legajo</th>
+                                <th class="sortable" data-sort="nombre">Apellido y Nombre</th>
+                                <th class="sortable" data-sort="p1">1er Parcial</th>
+                                <th class="sortable" data-sort="p2">2do Parcial</th>
+                                <th class="sortable" data-sort="rec1">1er Recup.</th>
+                                <th class="sortable" data-sort="int1">1er Integral</th>
+                                <th class="sortable" data-sort="int2">2do Integral</th>
+                                <th class="sortable" data-sort="regProfesor">Reg. Profesor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body"></tbody>
+                    </table>
+                    <div id="table-empty-state" class="empty-state" style="display:none">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 16.318A4.486 4.486 0 0012.016 15a4.486 4.486 0 00-3.197 1.318M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015H9.375V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
+                        </svg>
+                        <p>No se encontraron alumnos que coincidan con la búsqueda</p>
+                    </div>
+                </div>
+                <div class="table-footer">
+                    <span id="row-counter">Mostrando 0 de 0 alumnos</span>
+                </div>
+            </div>
+        </div><!-- /prof-dashboard -->
+    </div><!-- /tab-profesor -->
+
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <!-- TAB 2: Historia Académica                                    -->
+    <!-- ══════════════════════════════════════════════════════════════ -->
+    <div id="tab-historia" class="tab-panel" role="tabpanel" aria-labelledby="btn-tab-historia" style="display:none">
+
+        <!-- Landing / Empty State -->
+        <div id="hist-landing" class="tab-landing">
+            <div class="tab-landing-inner">
+                <div class="landing-icon landing-icon-historia">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                </div>
+                <h2 class="landing-title">Historia Académica</h2>
+                <p class="landing-desc">Cargá el archivo de Historia Académica emitido por Secretaría para analizar el historial de cursadas y detectar recursantes.</p>
+                <div class="landing-drop-zone landing-drop-zone-hist" id="hist-landing-drop">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <p><strong>Arrastrá y soltá aquí</strong> o hacé clic para examinar</p>
+                    <span>Soporta .xlsx y .xls · Archivo "Historia Académica" de Secretaría</span>
+                    <input type="file" id="hist-file-input" accept=".xlsx,.xls" style="display:none">
+                </div>
+            </div>
+        </div>
+
+        <!-- Historia Dashboard (hidden until file loaded) -->
+        <div id="hist-dashboard" class="dashboard-container" style="display:none">
+
+            <!-- Section header -->
+            <div class="historia-section-header">
+                <div class="historia-section-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.966 8.966 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                </div>
+                <div class="historia-section-info">
+                    <h2 id="hist-title">Historia Académica</h2>
+                    <div class="historia-meta">
+                        <span id="hist-materia">Materia: -</span>
+                        <span id="hist-comision">Comisión: -</span>
+                        <span id="hist-anio">Año: -</span>
+                        <span class="hist-source-badge">Secretaría Académica</span>
+                    </div>
+                </div>
+                <div class="compact-upload compact-upload-cyan" id="hist-compact-drop">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <span>Cargar otro archivo</span>
+                    <input type="file" id="hist-compact-input" accept=".xlsx,.xls" style="display:none">
+                </div>
+            </div>
+
+            <!-- KPI row -->
+            <div class="hist-kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">Total Inscriptos</div>
+                    <div class="kpi-value" id="hist-total">0</div>
+                    <div class="kpi-desc">En la comisión actual</div>
+                </div>
+                <div class="kpi-card kpi-ap-directa">
+                    <div class="kpi-title">Primera vez</div>
+                    <div class="kpi-value" id="hist-priVez">0</div>
+                    <div class="kpi-desc" id="hist-priVezPct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-regular">
+                    <div class="kpi-title">1 intento previo</div>
+                    <div class="kpi-value" id="hist-recur1">0</div>
+                    <div class="kpi-desc" id="hist-recur1Pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-abandono">
+                    <div class="kpi-title">2 intentos previos</div>
+                    <div class="kpi-value" id="hist-recur2">0</div>
+                    <div class="kpi-desc" id="hist-recur2Pct">0% del total</div>
+                </div>
+                <div class="kpi-card kpi-libre">
+                    <div class="kpi-title">3 o más previos</div>
+                    <div class="kpi-value" id="hist-recur3p">0</div>
+                    <div class="kpi-desc" id="hist-recur3pPct">0% del total</div>
+                </div>
+            </div>
+
+            <!-- Chart + Table layout -->
+            <div class="hist-body-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Distribución de Intentos Previos</div>
+                    <div class="chart-container">
+                        <canvas id="recursantes-chart"></canvas>
+                    </div>
+                </div>
+                <div class="data-panel hist-table-panel">
+                    <div class="panel-header">
+                        <div class="panel-title">Alumnos Inscriptos — Historial</div>
+                        <div class="panel-controls">
+                            <div class="search-box">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z" />
+                                </svg>
+                                <input type="text" id="hist-search" placeholder="Buscar por nombre o legajo...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table id="historia-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="legajo">Legajo</th>
+                                    <th class="sortable" data-sort="nombre">Apellido y Nombre</th>
+                                    <th class="sortable" data-sort="espec">Esp.</th>
+                                    <th class="sortable" data-sort="anioIngreso">Ingreso</th>
+                                    <th class="sortable sort-desc" data-sort="intentos">Intentos prev.</th>
+                                    <th>Últimos estados</th>
+                                    <th>Detalle</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hist-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer">
+                        <span id="hist-row-counter">Mostrando 0 de 0 alumnos</span>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /hist-dashboard -->
+    </div><!-- /tab-historia -->
+
+    <!-- Historia Académica Modal -->
+    <div id="historia-modal" class="hist-modal-overlay" style="display:none" onclick="if(event.target===this)closeHistoriaModal()">
+        <div class="hist-modal-box">
+            <button class="hist-modal-close" onclick="closeHistoriaModal()" aria-label="Cerrar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="20" height="20">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <div id="historia-modal-content"></div>
+        </div>
+    </div>
+
+    <script src="data.js?v=5"></script>
+    <script src="app.js?v=7"></script>
+</body>
+</html>
