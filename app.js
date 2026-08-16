@@ -18,6 +18,37 @@ let recursantesChartInstance = null;
 // Historia Académica state
 let historiaAcademicaData = null;
 
+// Configuración de jerarquía de condiciones académicas
+const defaultConditionsConfig = {
+  "conditions_hierarchy": [
+    { "priority": 1, "name": "Promocion", "db_states": ["Promocion TP", "Ap. Directa"] },
+    { "priority": 2, "name": "Regular", "db_states": ["Regular"] },
+    { "priority": 3, "name": "Libre", "db_states": ["Libre"] },
+    { "priority": 4, "name": "Abandono", "db_states": ["Abandonó"] },
+    { "priority": 5, "name": "No cursó", "db_states": ["No Cursó"] },
+    { "priority": 6, "name": "Inscripto", "db_states": ["Inscripto"] }
+  ]
+};
+let conditionsConfig = defaultConditionsConfig;
+
+function loadConditionsConfig() {
+    fetch('conditions.json')
+        .then(response => response.json())
+        .then(config => {
+            if (config && config.conditions_hierarchy) {
+                conditionsConfig = config;
+                console.log("Configuración de condiciones cargada:", conditionsConfig);
+                if (historiaAcademicaData) {
+                    renderHistoriaPanel(historiaAcademicaData);
+                }
+            }
+        })
+        .catch(err => {
+            console.warn("No se pudo cargar conditions.json mediante fetch, usando predeterminadas.", err);
+        });
+}
+
+
 // ─────────────────────────────────────────────────────────────────
 // DOM Elements (Professor tab)
 // ─────────────────────────────────────────────────────────────────
@@ -157,6 +188,7 @@ function updateSheetSelector() {
 // Initialize Application
 // ─────────────────────────────────────────────────────────────────
 function init() {
+    loadConditionsConfig();
     // ── Tab switching ─────────────────────────────────────────────
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -811,6 +843,42 @@ function parseExcelFilePromise(file) {
 // Historia Académica — Panel Rendering
 // ─────────────────────────────────────────────────────────────────
 
+function getBestConditionForStudent(student) {
+    const hierarchy = conditionsConfig.conditions_hierarchy;
+    let bestCond = null;
+    let minPriority = Infinity;
+
+    student.historia.forEach(h => {
+        const state = h.estado ? h.estado.trim() : "";
+        if (!state) return;
+
+        hierarchy.forEach(cond => {
+            if (cond.db_states && cond.db_states.includes(state)) {
+                if (cond.priority < minPriority) {
+                    minPriority = cond.priority;
+                    bestCond = cond;
+                }
+            }
+        });
+    });
+
+    if (!bestCond) {
+        bestCond = hierarchy[hierarchy.length - 1];
+    }
+    return bestCond;
+}
+
+function getConditionClass(name) {
+    const slug = name.toLowerCase();
+    if (slug.includes('promo')) return 'kpi-promocion';
+    if (slug.includes('regu')) return 'kpi-regular';
+    if (slug.includes('libr')) return 'kpi-libre';
+    if (slug.includes('aban')) return 'kpi-abandono';
+    if (slug.includes('curs') || slug.includes('no')) return 'kpi-no-curso';
+    if (slug.includes('insc')) return 'kpi-ap-directa';
+    return '';
+}
+
 function renderHistoriaPanel(data) {
     // Show historia dashboard, hide landing
     document.getElementById('hist-landing').style.display   = 'none';
@@ -824,20 +892,51 @@ function renderHistoriaPanel(data) {
 
     const students = data.students;
     const total    = students.length;
-    const priVez   = students.filter(s => s.intentos === 0).length;
-    const recur1   = students.filter(s => s.intentos === 1).length;
-    const recur2   = students.filter(s => s.intentos === 2).length;
-    const recur3p  = students.filter(s => s.intentos >= 3).length;
 
-    document.getElementById('hist-total').textContent       = total;
-    document.getElementById('hist-priVez').textContent      = priVez;
-    document.getElementById('hist-priVezPct').textContent   = total > 0 ? `${((priVez/total)*100).toFixed(1)}% del total`  : '-';
-    document.getElementById('hist-recur1').textContent      = recur1;
-    document.getElementById('hist-recur1Pct').textContent   = total > 0 ? `${((recur1/total)*100).toFixed(1)}% del total`  : '-';
-    document.getElementById('hist-recur2').textContent      = recur2;
-    document.getElementById('hist-recur2Pct').textContent   = total > 0 ? `${((recur2/total)*100).toFixed(1)}% del total`  : '-';
-    document.getElementById('hist-recur3p').textContent     = recur3p;
-    document.getElementById('hist-recur3pPct').textContent  = total > 0 ? `${((recur3p/total)*100).toFixed(1)}% del total` : '-';
+    // Calcular la cantidad de alumnos para cada mejor condición de la jerarquía
+    const counts = {};
+    conditionsConfig.conditions_hierarchy.forEach(cond => {
+        counts[cond.name] = 0;
+    });
+
+    students.forEach(s => {
+        const bestCond = getBestConditionForStudent(s);
+        if (bestCond && counts[bestCond.name] !== undefined) {
+            counts[bestCond.name]++;
+        }
+    });
+
+    // Renderizar los KPIs dinámicamente en el contenedor
+    const container = document.getElementById('hist-kpi-container');
+    if (container) {
+        container.innerHTML = '';
+
+        // Card de Total Inscriptos
+        const totalCard = document.createElement('div');
+        totalCard.className = 'kpi-card';
+        totalCard.innerHTML = `
+            <div class="kpi-title">Total Inscriptos</div>
+            <div class="kpi-value">${total}</div>
+            <div class="kpi-desc">En la comisión actual</div>
+        `;
+        container.appendChild(totalCard);
+
+        // Cards de cada condición de la jerarquía
+        conditionsConfig.conditions_hierarchy.forEach(cond => {
+            const count = counts[cond.name] || 0;
+            const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+            const cardClass = getConditionClass(cond.name);
+
+            const card = document.createElement('div');
+            card.className = `kpi-card ${cardClass}`;
+            card.innerHTML = `
+                <div class="kpi-title">${cond.name} (Mejor)</div>
+                <div class="kpi-value">${count}</div>
+                <div class="kpi-desc">${pct}% del total inscripto</div>
+            `;
+            container.appendChild(card);
+        });
+    }
 
     renderRecursantesChart(students);
     renderHistoriaTable(students);
