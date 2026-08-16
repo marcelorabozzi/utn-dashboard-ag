@@ -1,47 +1,48 @@
 @echo off
-title UTN Academics Dashboard - Iniciar Sistema
-chcp 65001 > nul
+setlocal enabledelayedexpansion
+title UTN Academics Dashboard
+chcp 65001 >nul
 cls
 
 echo =====================================================================
-echo           UTN Academics Dashboard - Iniciador de Sistema
+echo         UTN Academics Dashboard - Iniciador de Sistema
 echo =====================================================================
 echo.
 
-REM Buscar Python
-where python >nul 2>nul
-if %ERRORLEVEL% equ 0 (
-    echo [+] Se detecto Python en el sistema.
-    echo [+] Iniciando servidor local en el puerto 8000...
-    echo [+] Abriendo navegador en http://localhost:8000 ...
-    echo.
-    echo Para detener el servidor, cierre esta ventana o presione Ctrl+C.
-    echo.
-    start "" http://localhost:8000
-    python -m http.server 8000
-    goto end
-)
+REM --- Verificar Python ---
+python --version >nul 2>nul
+if !ERRORLEVEL! equ 0 goto :usePython
 
-REM Buscar Node/NPM
-where npm >nul 2>nul
-if %ERRORLEVEL% equ 0 (
-    echo [+] Se detecto Node.js/NPM en el sistema.
-    echo [+] Iniciando servidor local con http-server en el puerto 8080...
-    echo [+] Abriendo navegador en http://localhost:8080 ...
-    echo.
-    echo Para detener el servidor, cierre esta ventana o presione Ctrl+C.
-    echo.
-    start "" http://localhost:8080
-    npx http-server -p 8080 --silent
-    goto end
-)
+REM --- Verificar Node/NPM ---
+npm --version >nul 2>nul
+if !ERRORLEVEL! equ 0 goto :useNode
 
-REM Alternativa: Abrir archivo HTML directamente
-echo [!] No se detecto Python ni Node.js en el sistema.
-echo [!] Iniciando la aplicacion abriendo el archivo index.html directamente.
+REM --- Sin servidor: abrir HTML directo ---
+echo [!] No se encontro Python ni Node.js.
+echo [!] Abriendo index.html directamente en el navegador.
 echo.
 start "" "%~dp0index.html"
+goto :fin
 
-:end
+:usePython
+echo [+] Python detectado.
+echo [+] Servidor en: http://localhost:8000
+echo [+] Cerrá esta ventana para detener el servidor.
+echo.
+start /b cmd /c "timeout /t 2 >nul && start http://localhost:8000"
+python -m http.server 8000 --bind 127.0.0.1
+goto :fin
+
+:useNode
+echo [+] Node.js detectado.
+echo [+] Servidor en: http://localhost:8080
+echo [+] Cerra esta ventana para detener el servidor.
+echo.
+start /b cmd /c "timeout /t 3 >nul && start http://localhost:8080"
+npx http-server . -p 8080 -s --cors
+goto :fin
+
+:fin
 echo.
 pause
+endlocal
