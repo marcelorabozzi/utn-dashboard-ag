@@ -2,31 +2,36 @@
   "conditions_hierarchy": [
     {
       "priority": 1,
-      "name": "Promocion",
+      "name": "Promocion Vigente",
       "db_states": ["Promocion TP", "Ap. Directa"]
     },
     {
       "priority": 2,
+      "name": "Promocion Vencida",
+      "db_states": ["Promocion TP", "Ap. Directa"]
+    },
+    {
+      "priority": 3,
       "name": "Regular",
       "db_states": ["Regular"]
     },
     {
-      "priority": 3,
+      "priority": 4,
       "name": "Libre",
       "db_states": ["Libre"]
     },
     {
-      "priority": 4,
+      "priority": 5,
       "name": "Abandono",
       "db_states": ["Abandonó"]
     },
     {
-      "priority": 5,
+      "priority": 6,
       "name": "No cursó",
       "db_states": ["No Cursó"]
     },
     {
-      "priority": 6,
+      "priority": 7,
       "name": "Inscripto",
       "db_states": ["Inscripto"]
     }

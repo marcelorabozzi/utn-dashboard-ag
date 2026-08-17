@@ -17,16 +17,19 @@ let recursantesChartInstance = null;
 
 // Historia Académica state
 let historiaAcademicaData = null;
+let histFilterCondition = null;
+
 
 // Configuración de jerarquía de condiciones académicas
 const defaultConditionsConfig = {
   "conditions_hierarchy": [
-    { "priority": 1, "name": "Promocion", "db_states": ["Promocion TP", "Ap. Directa"] },
-    { "priority": 2, "name": "Regular", "db_states": ["Regular"] },
-    { "priority": 3, "name": "Libre", "db_states": ["Libre"] },
-    { "priority": 4, "name": "Abandono", "db_states": ["Abandonó"] },
-    { "priority": 5, "name": "No cursó", "db_states": ["No Cursó"] },
-    { "priority": 6, "name": "Inscripto", "db_states": ["Inscripto"] }
+    { "priority": 1, "name": "Promocion Vigente", "db_states": ["Promocion TP", "Ap. Directa"] },
+    { "priority": 2, "name": "Promocion Vencida", "db_states": ["Promocion TP", "Ap. Directa"] },
+    { "priority": 3, "name": "Regular", "db_states": ["Regular"] },
+    { "priority": 4, "name": "Libre", "db_states": ["Libre"] },
+    { "priority": 5, "name": "Abandono", "db_states": ["Abandonó"] },
+    { "priority": 6, "name": "No cursó", "db_states": ["No Cursó"] },
+    { "priority": 7, "name": "Inscripto", "db_states": ["Inscripto"] }
   ]
 };
 let conditionsConfig = defaultConditionsConfig;
@@ -848,12 +851,25 @@ function getBestConditionForStudent(student) {
     let bestCond = null;
     let minPriority = Infinity;
 
+    const currentAnio = historiaAcademicaData && historiaAcademicaData.anio 
+        ? parseInt(historiaAcademicaData.anio) 
+        : new Date().getFullYear();
+
     student.historia.forEach(h => {
         const state = h.estado ? h.estado.trim() : "";
         if (!state) return;
 
         hierarchy.forEach(cond => {
             if (cond.db_states && cond.db_states.includes(state)) {
+                if (cond.name === "Promocion Vigente") {
+                    const age = currentAnio - (h.anio || currentAnio);
+                    if (age > 1) return;
+                }
+                if (cond.name === "Promocion Vencida") {
+                    const age = currentAnio - (h.anio || currentAnio);
+                    if (age <= 1) return;
+                }
+
                 if (cond.priority < minPriority) {
                     minPriority = cond.priority;
                     bestCond = cond;
@@ -870,6 +886,8 @@ function getBestConditionForStudent(student) {
 
 function getConditionClass(name) {
     const slug = name.toLowerCase();
+    if (slug.includes('vigente')) return 'kpi-promocion';
+    if (slug.includes('vencida')) return 'kpi-abandono';
     if (slug.includes('promo')) return 'kpi-promocion';
     if (slug.includes('regu')) return 'kpi-regular';
     if (slug.includes('libr')) return 'kpi-libre';
@@ -929,6 +947,11 @@ function renderHistoriaPanel(data) {
 
             const card = document.createElement('div');
             card.className = `kpi-card ${cardClass}`;
+            card.style.cursor = 'pointer';
+            card.title = `Filtrar por ${cond.name}`;
+            card.addEventListener('click', () => {
+                setHistConditionFilter(cond.name);
+            });
             card.innerHTML = `
                 <div class="kpi-title">${cond.name} (Mejor)</div>
                 <div class="kpi-value">${count}</div>
@@ -942,29 +965,56 @@ function renderHistoriaPanel(data) {
     renderHistoriaTable(students);
 }
 
+function getConditionHexColor(name) {
+    const slug = name.toLowerCase();
+    if (slug.includes('vigente')) return '#06b6d4'; // Cyan
+    if (slug.includes('vencida')) return '#a855f7'; // Purple/pink
+    if (slug.includes('promo')) return '#06b6d4';   // Cyan fallback
+    if (slug.includes('regu')) return '#f59e0b';    // Orange
+    if (slug.includes('libr')) return '#ef4444';    // Red
+    if (slug.includes('aban')) return '#ec4899';    // Pinkish/purple
+    if (slug.includes('curs') || slug.includes('no')) return '#6b7280'; // Gray
+    if (slug.includes('insc')) return '#10b981';    // Green
+    return '#9ca3af';
+}
+
 function renderRecursantesChart(students) {
     if (recursantesChartInstance) recursantesChartInstance.destroy();
 
-    const maxAttempts = students.reduce((m, s) => Math.max(m, s.intentos), 0);
-    const palette = ['#10b981','#06b6d4','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
-    const labels = [], values = [], colors = [];
+    const counts = {};
+    conditionsConfig.conditions_hierarchy.forEach(cond => {
+        counts[cond.name] = 0;
+    });
 
-    for (let i = 0; i <= Math.min(maxAttempts, 7); i++) {
-        labels.push(i === 0 ? '1ª vez' : `${i} intento${i > 1 ? 's' : ''} prev.`);
-        values.push(students.filter(s => s.intentos === i).length);
-        colors.push(palette[Math.min(i, palette.length - 1)]);
-    }
-    if (maxAttempts > 7) {
-        labels.push('8+ intentos');
-        values.push(students.filter(s => s.intentos > 7).length);
-        colors.push('#dc2626');
-    }
+    students.forEach(s => {
+        const bestCond = getBestConditionForStudent(s);
+        if (bestCond && counts[bestCond.name] !== undefined) {
+            counts[bestCond.name]++;
+        }
+    });
+
+    const labels = [];
+    const values = [];
+    const colors = [];
+
+    conditionsConfig.conditions_hierarchy.forEach(cond => {
+        labels.push(cond.name);
+        values.push(counts[cond.name] || 0);
+        colors.push(getConditionHexColor(cond.name));
+    });
 
     const ctx = document.getElementById('recursantes-chart').getContext('2d');
     recursantesChartInstance = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets: [{ label: 'Alumnos', data: values, backgroundColor: colors, borderRadius: 7, borderSkipped: false }] },
         options: {
+            onClick: (event, elements) => {
+                if (elements && elements.length > 0) {
+                    const index = elements[0].index;
+                    const conditionName = labels[index];
+                    setHistConditionFilter(conditionName);
+                }
+            },
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
@@ -981,11 +1031,49 @@ function renderRecursantesChart(students) {
 let histSortCol = 'intentos';
 let histSortDir = 'desc';
 
+function setHistConditionFilter(conditionName) {
+    histFilterCondition = conditionName;
+    
+    const container = document.getElementById('hist-filter-badge-container');
+    const text = document.getElementById('hist-filter-badge-text');
+    if (container && text) {
+        container.style.display = 'inline-flex';
+        text.textContent = `Filtro: ${conditionName}`;
+    }
+    
+    const searchVal = document.getElementById('hist-search')?.value || '';
+    if (historiaAcademicaData) {
+        renderHistoriaTable(historiaAcademicaData.students, searchVal);
+    }
+}
+
+function clearHistConditionFilter() {
+    histFilterCondition = null;
+    
+    const container = document.getElementById('hist-filter-badge-container');
+    if (container) {
+        container.style.display = 'none';
+    }
+    
+    const searchVal = document.getElementById('hist-search')?.value || '';
+    if (historiaAcademicaData) {
+        renderHistoriaTable(historiaAcademicaData.students, searchVal);
+    }
+}
+
 function renderHistoriaTable(students, searchVal = '') {
     const tbody = document.getElementById('hist-table-body');
     if (!tbody) return;
 
     let filtered = [...students];
+    
+    if (histFilterCondition) {
+        filtered = filtered.filter(s => {
+            const best = getBestConditionForStudent(s);
+            return best && best.name === histFilterCondition;
+        });
+    }
+
     if (searchVal.trim()) {
         const q = searchVal.trim().toLowerCase();
         filtered = filtered.filter(s =>
