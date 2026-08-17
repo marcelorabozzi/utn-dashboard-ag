@@ -26,21 +26,24 @@ goto :fin
 
 :usePython
 echo [+] Python detectado.
-echo [+] Servidor en: http://localhost:8000
+echo [+] Servidor en: http://localhost:5016
 echo [+] Cerrá esta ventana para detener el servidor.
 echo.
-start /b cmd /c "timeout /t 2 >nul && start http://localhost:8000"
-python -m http.server 8000 --bind 127.0.0.1
+start /b cmd /c "timeout /t 2 >nul && start http://localhost:5016"
+python -m http.server 5016 --bind 127.0.0.1
+
 goto :fin
 
 :useNode
 echo [+] Node.js detectado.
-echo [+] Servidor en: http://localhost:8080
+echo [+] Servidor en: http://localhost:5016
 echo [+] Cerra esta ventana para detener el servidor.
 echo.
-start /b cmd /c "timeout /t 3 >nul && start http://localhost:8080"
-npx http-server . -p 8080 -s --cors
+start /b cmd /c "timeout /t 3 >nul && start http://localhost:5016"
+npx http-server . -p 5016 -s --cors
 goto :fin
+
+
 
 :fin
 echo.

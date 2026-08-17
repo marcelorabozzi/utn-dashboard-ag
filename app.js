@@ -897,6 +897,20 @@ function getConditionClass(name) {
     return '';
 }
 
+function getTableBadgeClass(name) {
+    const slug = name.toLowerCase();
+    if (slug.includes('vigente')) return 'badge-promocion';
+    if (slug.includes('vencida')) return 'badge-abandono';
+    if (slug.includes('promo')) return 'badge-promocion';
+    if (slug.includes('regu')) return 'badge-regular';
+    if (slug.includes('libr')) return 'badge-libre';
+    if (slug.includes('aban')) return 'badge-abandono';
+    if (slug.includes('curs') || slug.includes('no')) return 'badge-no-curso';
+    if (slug.includes('insc')) return 'badge-ap-directa';
+    return 'badge-vacío';
+}
+
+
 function renderHistoriaPanel(data) {
     // Show historia dashboard, hide landing
     document.getElementById('hist-landing').style.display   = 'none';
@@ -953,7 +967,7 @@ function renderHistoriaPanel(data) {
                 setHistConditionFilter(cond.name);
             });
             card.innerHTML = `
-                <div class="kpi-title">${cond.name} (Mejor)</div>
+                <div class="kpi-title">${cond.name}</div>
                 <div class="kpi-value">${count}</div>
                 <div class="kpi-desc">${pct}% del total inscripto</div>
             `;
@@ -1083,7 +1097,15 @@ function renderHistoriaTable(students, searchVal = '') {
 
     filtered.sort((a, b) => {
         let va = a[histSortCol], vb = b[histSortCol];
-        if (histSortCol === 'legajo') { va = parseInt(va) || 0; vb = parseInt(vb) || 0; }
+        if (histSortCol === 'legajo') { 
+            va = parseInt(va) || 0; 
+            vb = parseInt(vb) || 0; 
+        } else if (histSortCol === 'mejorCondicion') {
+            const bestA = getBestConditionForStudent(a);
+            const bestB = getBestConditionForStudent(b);
+            va = bestA ? bestA.priority : Infinity;
+            vb = bestB ? bestB.priority : Infinity;
+        }
         if (typeof va === 'string') return histSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
         return histSortDir === 'asc' ? va - vb : vb - va;
     });
@@ -1103,6 +1125,10 @@ function renderHistoriaTable(students, searchVal = '') {
             .map(h => `<span class="hist-estado-dot estado-${estadoSlug(h.estado)}" title="${h.estado} (${h.anio})">${h.anio}</span>`)
             .join('');
 
+        const bestCond = getBestConditionForStudent(s);
+        const bestCondName = bestCond ? bestCond.name : '-';
+        const bestCondClass = bestCond ? getTableBadgeClass(bestCond.name) : 'badge-vacío';
+
         tr.innerHTML = `
             <td>${s.legajo}</td>
             <td style="font-weight:500">${s.nombre}</td>
@@ -1110,6 +1136,7 @@ function renderHistoriaTable(students, searchVal = '') {
             <td>${s.anioIngreso || '-'}</td>
             <td><span class="badge ${intentoClass}">${s.intentos === 0 ? '1ª vez' : s.intentos + ' prev.'}</span></td>
             <td>${lastStates || '<span style="color:var(--text-muted)">-</span>'}</td>
+            <td><span class="badge ${bestCondClass}">${bestCondName}</span></td>
             <td>
                 <button class="hist-detail-btn" onclick="openHistoriaModal('${s.legajo}')">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="14" height="14">
