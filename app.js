@@ -541,10 +541,10 @@ function renderCharts() {
     const ctx1 = document.getElementById('reg-profesor-chart').getContext('2d');
     regProfesorChartInstance = new Chart(ctx1, {
         type: 'doughnut',
-        data: { labels, datasets: [{ data: chartData, backgroundColor: colors, borderColor: '#111827', borderWidth: 2 }] },
+        data: { labels, datasets: [{ data: chartData, backgroundColor: colors, borderColor: '#ffffff', borderWidth: 2 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { color: '#f3f4f6', font: { family: 'Inter' } } } }
+            plugins: { legend: { position: 'bottom', labels: { color: '#475569', font: { family: 'Inter' } } } }
         }
     });
 
@@ -575,8 +575,8 @@ function renderCharts() {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { family: 'Inter' } } },
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af', font: { family: 'Inter' }, stepSize: 5 } }
+                    x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { family: 'Inter' } } },
+                    y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { family: 'Inter' }, stepSize: 5 } }
                 }
             }
         });
@@ -1035,8 +1035,8 @@ function renderRecursantesChart(students) {
                 tooltip: { callbacks: { afterLabel: ctx => `${students.length > 0 ? ((ctx.parsed.y / students.length) * 100).toFixed(1) : 0}% del total` } }
             },
             scales: {
-                x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9ca3af', font: { family: 'Inter' } } },
-                y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9ca3af', font: { family: 'Inter' }, precision: 0 } }
+                x: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { family: 'Inter' } } },
+                y: { grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { color: '#64748b', font: { family: 'Inter' }, precision: 0 } }
             }
         }
     });
